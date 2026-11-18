@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Moon Mission Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one centered mission console. Start screen, then one question at a time with a rocket progress track, then a results briefing. */
+:root{
+  --bg:#0a0f1f; --panel:#131b33; --panel2:#1b2545; --line:#2c3a66;
+  --fg:#eef2ff; --muted:#a7b3da;
+  --accent:#ffb43a; --cyan:#5cd6ff; --good:#4ade80; --bad:#ff6f6f;
+  --display:"Chakra Petch","Trebuchet MS",sans-serif; --body:"Atkinson Hyperlegible","Segoe UI",Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:20px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;
+  background-image:radial-gradient(1px 1px at 12% 18%,#fff6 50%,transparent),radial-gradient(1.5px 1.5px at 78% 12%,#fff8 50%,transparent),radial-gradient(1px 1px at 44% 70%,#fff5 50%,transparent),radial-gradient(1.5px 1.5px at 90% 62%,#fff6 50%,transparent),radial-gradient(1px 1px at 22% 88%,#fff5 50%,transparent);}
+main{max-width:860px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.brand{font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:15px;color:var(--cyan)}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 14px;font-family:var(--display);font-size:16px;font-variant-numeric:tabular-nums}
+.chip b{color:var(--accent)}
+.track{position:relative;height:34px;margin:6px 0 18px}
+.track .rail{position:absolute;left:0;right:0;top:15px;height:4px;background:var(--line);border-radius:4px}
+.track .fill{position:absolute;left:0;top:15px;height:4px;background:linear-gradient(90deg,var(--cyan),var(--accent));border-radius:4px;transition:width .4s}
+.track .rocket{position:absolute;top:0;font-size:26px;transform:translateX(-50%) rotate(90deg);transition:left .4s;line-height:34px}
+.track .moon{position:absolute;right:-4px;top:2px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff7d6,#b9b39a)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.hero{padding:30px 26px}
+.hero h1{font-size:clamp(34px,7vw,56px);line-height:1.05}
+.hero p{color:var(--muted);max-width:56ch}
+.missions{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:22px}
+.mission{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-align:left}
+.mission:hover{border-color:var(--cyan)}
+.mission b{display:block;font-family:var(--display);font-size:20px}
+.mission span{color:var(--muted);font-size:16px}
+.mission.all{border-color:var(--accent)}
+.topic{font-family:var(--display);text-transform:uppercase;letter-spacing:.1em;font-size:14px;color:var(--cyan);margin-bottom:6px}
+.q{font-family:var(--display);font-size:clamp(22px,4.2vw,30px);line-height:1.25;margin:0 0 14px;font-weight:500}
+.diagram{background:#070b17;border:1px solid var(--line);border-radius:10px;padding:8px;margin:0 0 16px;max-width:480px}
+.diagram svg{display:block;width:100%;height:auto}
+.opts{display:grid;gap:10px}
+.opts.pics{grid-template-columns:repeat(2,1fr)}
+.opt{display:flex;gap:14px;align-items:center;text-align:left;background:var(--panel2);border:2px solid var(--line);border-radius:12px;padding:14px 16px;width:100%;font-size:20px}
+.opt:hover:not(:disabled){border-color:var(--cyan)}
+.opt .k{flex:none;width:34px;height:34px;border-radius:8px;background:var(--bg);display:grid;place-items:center;font-family:var(--display);font-weight:700;color:var(--cyan)}
+.opt .pic{flex:1;min-width:0}
+.opt.right{border-color:var(--good);background:#12301f}
+.opt.wrong{border-color:var(--bad);background:#3a1620}
+.opt:disabled{cursor:default}
+.opt.pic-opt{flex-direction:column;align-items:stretch;gap:8px}
+.opt.pic-opt .k{align-self:flex-start}
+.feedback{margin-top:16px;border-radius:12px;padding:16px 18px;border:1px solid var(--line);background:var(--panel2)}
+.feedback.good{border-color:var(--good)} .feedback.bad{border-color:var(--bad)}
+.feedback h3{font-size:22px;margin-bottom:4px}
+.feedback.good h3{color:var(--good)} .feedback.bad h3{color:var(--bad)}
+.feedback p{margin:0;color:var(--fg)}
+.btn{background:var(--accent);color:#1a1200;border:0;border-radius:12px;padding:12px 26px;font-family:var(--display);font-weight:700;font-size:20px;margin-top:14px}
+.btn.ghost{background:transparent;color:var(--fg);border:2px solid var(--line)}
+.btn:hover{filter:brightness(1.08)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.rank{font-family:var(--display);font-size:clamp(30px,6vw,46px);color:var(--accent);line-height:1.1}
+.big{font-family:var(--display);font-size:22px;color:var(--muted)}
+.bars{display:grid;gap:12px;margin:20px 0}
+.bar .lab{display:flex;justify-content:space-between;gap:10px;font-size:18px;margin-bottom:4px}
+.bar .lab span:last-child{font-variant-numeric:tabular-nums;color:var(--muted)}
+.bar .meter{height:14px;background:var(--bg);border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.bar .meter i{display:block;height:100%;background:var(--good)}
+.bar.weak .meter i{background:var(--bad)}
+.bar.mid .meter i{background:var(--accent)}
+.hint{color:var(--muted);font-size:16px;margin-top:10px}
+@media (max-width:520px){body{font-size:18px}.opts.pics{grid-template-columns:1fr}.opt{font-size:18px}}
+@media (prefers-reduced-motion:reduce){.track .fill,.track .rocket{transition:none}}
+</style>
+
+<main>
+  <div class="top">
+    <div class="brand">Moon Mission &middot; Sun-Earth-Moon Review</div>
+    <div class="stats" id="stats" hidden>
+      <div class="chip">Score <b id="sc">0</b></div>
+      <div class="chip">Streak <b id="st">0</b></div>
+      <div class="chip"><b id="qn">1</b> / <span id="qt">0</span></div>
+    </div>
+  </div>
+  <div id="app"></div>
+</main>
+
+<script>
+/* ---------- diagrams: top-down view, Sun on the left, light travels right ---------- */
+function sys(theta, opts){
+  opts = opts || {};
+  var ex=200, ey=100, R=62, r=9;
+  var rad = theta*Math.PI/180;
+  var mx = ex - R*Math.cos(rad), my = ey - R*Math.sin(rad);
+  var s = '<svg viewBox="0 0 360 200" role="img" aria-label="Top-down view of the Sun, Earth, and Moon">';
+  s += '<defs><radialGradient id="sg'+opts.id+'"><stop offset="0" stop-color="#fff3a0"/><stop offset="1" stop-color="#ffb43a"/></radialGradient>';
+  s += '<radialGradient id="eg'+opts.id+'" cx=".35" cy=".35"><stop offset="0" stop-color="#7fd0ff"/><stop offset="1" stop-color="#1f5fbf"/></radialGradient></defs>';
+  s += '<circle cx="42" cy="100" r="30" fill="url(#sg'+opts.id+')"/>';
+  s += '<text x="42" y="150" fill="#ffd27a" font-size="13" text-anchor="middle" font-family="sans-serif">Sun</text>';
+  [58,100,142].forEach(function(y){
+    s += '<line x1="82" y1="'+y+'" x2="114" y2="'+y+'" stroke="#ffd27a" stroke-width="2" stroke-dasharray="5 4"/>';
+    s += '<path d="M114 '+(y-4)+' L122 '+y+' L114 '+(y+4)+' Z" fill="#ffd27a"/>';
+  });
+  s += '<circle cx="'+ex+'" cy="'+ey+'" r="'+R+'" fill="none" stroke="#4a5a90" stroke-width="1.5" stroke-dasharray="3 5"/>';
+  s += '<circle cx="'+ex+'" cy="'+ey+'" r="20" fill="url(#eg'+opts.id+')"/>';
+  s += '<text x="'+ex+'" y="'+(ey+4)+'" fill="#fff" font-size="11" text-anchor="middle" font-family="sans-serif" font-weight="700">Earth</text>';
+  s += '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="'+r+'" fill="#2d3558" stroke="#8d97c4" stroke-width="1"/>';
+  s += '<path d="M'+mx.toFixed(1)+' '+(my-r).toFixed(1)+' A'+r+' '+r+' 0 0 0 '+mx.toFixed(1)+' '+(my+r).toFixed(1)+' Z" fill="#fff3c4"/>';
+  s += '<text x="'+(mx+(my<100?0:0)).toFixed(1)+'" y="'+(my<100?(my-r-6):(my+r+16)).toFixed(1)+'" fill="#d8def5" font-size="12" text-anchor="middle" font-family="sans-serif">Moon</text>';
+  s += '</svg>';
+  return s;
+}
+
+/* ---------- questions ---------- */
+var TOPICS = [
+  {id:'phases', name:'Moon Phases', blurb:'Read the diagram, name the phase'},
+  {id:'eclipses', name:'Eclipses', blurb:'Solar, lunar, and why not every month'},
+  {id:'seasons', name:'Seasons', blurb:'Tilt, not distance'},
+  {id:'gravity', name:'Gravity', blurb:'Mass, distance, force arrows'},
+  {id:'orbits', name:'Orbits', blurb:'Why things go around other things'},
+  {id:'vocab', name:'Vocabulary', blurb:'Words from the unit, in class definitions'},
+  {id:'tides', name:'Tides', blurb:'Spring tides, supermoons, king tides'}
+];
+var Q = [
+{t:'phases', diag:180, q:'Look at the diagram. What Moon phase do people on Earth see?', o:['New moon','Crescent moon','Quarter moon','Full moon'], a:3,
+  why:'The Moon is on the far side of Earth from the Sun. The half lit by the Sun faces Earth, so we see the whole lit half.'},
+ {t:'phases', pics:[0,90,180,270], q:'Which picture would give us a NEW MOON as seen from Earth?', a:0,
+  why:'At new moon the Moon sits between Earth and the Sun. Its lit half faces the Sun, away from us.'},
+ {t:'phases', diag:45, q:'Look at the diagram. What Moon phase do people on Earth see?', o:['Full moon','New moon','Crescent moon','Quarter moon'], a:2,
+  why:'Only a thin sliver of the lit half is turned toward Earth. That is a crescent.'},
+ {t:'phases', diag:90, q:'The Moon is in this spot in its orbit. How does it look from Earth?', o:['Fully lit','Not lit at all','A thin crescent','Half lit (a quarter moon)'], a:3,
+  why:'From Earth we see half of the Moon’s lit half, so the Moon looks half lit.'},
+ {t:'eclipses', pics:[0,90,180,270], q:'In which picture could a SOLAR ECLIPSE happen?', a:0,
+  why:'A solar eclipse needs the Moon directly between the Sun and Earth, so its shadow can land on Earth.'},
+ {t:'eclipses', pics:[0,90,180,270], q:'In which picture could a LUNAR ECLIPSE happen?', a:2,
+  why:'A lunar eclipse needs Earth directly between the Sun and the Moon, so Earth’s shadow lands on the Moon.'},
+ {t:'eclipses', q:'What happens during a solar eclipse?', o:['Earth’s shadow falls on the Moon','The Moon moves between the Sun and Earth, and its shadow falls on part of Earth','The Sun turns off for a few minutes','The Moon moves in front of Earth and blocks Earth’s light'], a:1,
+  why:'The Moon blocks sunlight and casts its shadow on a small part of Earth.'},
+ {t:'eclipses', q:'Why isn’t there an eclipse at every new moon and every full moon?', o:['The Moon’s orbit is tilted about 5°, so the shadow usually misses','Earth’s axis is tilted about 23.5°','The Moon is too small to make a shadow','Sunlight bends around the Moon'], a:0,
+  why:'The Moon’s orbit is tilted about 5° compared with Earth’s orbit. Most months the Sun, Earth, and Moon do not line up exactly.'},
+ {t:'seasons', q:'What causes the seasons on Earth?', o:['Earth’s axis is tilted about 23.5°','Earth gets closer to and farther from the Sun','The Moon’s orbit is tilted about 5°','The Sun gets brighter and dimmer'], a:0,
+  why:'The tilt changes how directly sunlight hits each part of Earth as it orbits the Sun.'},
+ {t:'seasons', q:'Why are summer days hotter in the Northern Hemisphere?', o:['Earth is closest to the Sun then','The Northern Hemisphere is tilted toward the Sun, so sunlight is more direct and days are longer','The Moon pulls Earth closer to the Sun','Earth moves faster in summer'], a:1,
+  why:'Tilted toward the Sun means more direct light and more hours of daylight.'},
+ {t:'seasons', q:'A student says, “It is summer because Earth is closer to the Sun.” What is wrong with that claim?', o:['Nothing is wrong with it','Summer happens when Earth is farthest away','Seasons come from Earth’s tilt, not its distance from the Sun','Earth does not orbit the Sun'], a:2,
+  why:'Earth’s distance changes only a little. The tilt is what makes seasons.'},
+ {t:'gravity', q:'Which statement about gravity is true?', o:['It pushes objects apart based on their size','It only works when objects touch','It pulls objects toward each other, and it depends on their mass','It only works on Earth'], a:2,
+  why:'Gravity pulls every object toward every other object. More mass means a stronger pull.'},
+ {t:'gravity', q:'Two objects move farther apart. What happens to the force of gravity between them?', o:['It gets weaker','It gets stronger','It stays the same','It turns into a push'], a:0,
+  why:'More distance means weaker gravity. In a force-arrow diagram the arrows get shorter.'},
+ {t:'gravity', q:'In a force-arrow diagram of two objects, the mass of one object increases. What happens to the gravity arrows?', o:['They get shorter','They point away from each other','They get longer','They disappear'], a:2,
+  why:'More mass means a stronger pull, so the arrows get longer.'},
+ {t:'gravity', q:'Which pair has the STRONGEST gravitational pull between them?', o:['Two small objects far apart','Two large objects close together','A large and a small object far apart','Two small objects touching'], a:1,
+  why:'Big masses and a short distance give the strongest pull.'},
+ {t:'orbits', q:'Why does the Moon orbit Earth instead of Earth orbiting the Moon?', o:['Earth is warmer than the Moon','Earth has more mass than the Moon','The Moon is lit by the Sun','The Moon has more mass than Earth'], a:1,
+  why:'The object with more mass has stronger gravity, so the smaller one goes around it.'},
+ {t:'orbits', q:'Why do the planets in our solar system orbit the Sun?', o:['The Sun is hot','The Sun spins','The Sun has by far the most mass, so its gravity is strongest','The planets are bigger than the Sun'], a:2,
+  why:'The Sun holds more than 99% of the mass in the solar system.'},
+ {t:'orbits', q:'The Moon travels around the Sun along with Earth, but it also circles Earth. What keeps the Moon in orbit around Earth?', o:['Earth\u2019s gravity pulls on it, and Earth is very close to the Moon','The Moon has no gravity of its own','Earth is bigger than the Sun','The Moon is made of Earth rock'], a:0,
+  why:'Earth\u2019s gravity is strong this close to Earth, so the Moon keeps circling Earth while the two of them travel around the Sun together.'},
+ {t:'orbits', q:'Seven planets circle a star called Trappist-1. What does that tell you about the star?', o:['It has much more mass than the planets','It has less mass than the planets','It has the same mass as each planet','It has no mass'], a:0,
+  why:'Smaller objects orbit the much more massive one.'},
+ {t:'phases', pics:[180,45,0,90], q:'Which picture would give us a FULL MOON as seen from Earth?', a:0,
+  why:'At full moon Earth is between the Sun and the Moon, so the side of the Moon facing Earth is fully lit.'},
+ {t:'phases', pics:[0,45,90,180], q:'Which picture would give us a CRESCENT MOON as seen from Earth?', a:1,
+  why:'The Moon is mostly on the Sun\u2019s side of Earth, so only a thin sliver of its lit half faces us.'},
+ {t:'eclipses', q:'What happens during a lunar eclipse?', o:['The Moon moves between the Sun and Earth','Earth moves between the Sun and the Moon, and Earth\u2019s shadow falls on the Moon','The Sun\u2019s shadow falls on Earth','The Moon stops orbiting Earth for a few hours'], a:1,
+  why:'Earth blocks sunlight from reaching the Moon. Earth\u2019s shadow covers the Moon.'},
+ {t:'eclipses', q:'During which Moon phase can a SOLAR eclipse happen?', o:['Full moon','New moon','Quarter moon','Any phase'], a:1,
+  why:'Only at new moon is the Moon between the Sun and Earth.'},
+ {t:'eclipses', q:'During which Moon phase can a LUNAR eclipse happen?', o:['New moon','Quarter moon','Crescent moon','Full moon'], a:3,
+  why:'Only at full moon is Earth between the Sun and the Moon.'},
+ {t:'seasons', q:'In December the Northern Hemisphere is tilted away from the Sun. What season is it there?', o:['Summer','Winter','There is no change','It depends on how close Earth is to the Sun'], a:1,
+  why:'Tilted away means less direct light and shorter days, so it is winter.'},
+ {t:'gravity', q:'In a force-arrow diagram, the distance between two objects DECREASES. What happens to the gravity arrows?', o:['They get longer, because gravity gets stronger when objects are closer','They get shorter, because gravity gets weaker when objects are closer','They point away from each other','They stay the same'], a:0,
+  why:'Closer objects pull on each other harder.'},
+ {t:'gravity', q:'In a force-arrow diagram, the mass of one object DECREASES. What happens to the gravity arrows?', o:['They get longer','They get shorter','They point away from each other','They stay the same'], a:1,
+  why:'Less mass means a weaker pull, so the arrows get shorter.'},
+ {t:'gravity', q:'Earth\u2019s gravity keeps the Moon in orbit even though the two never touch. What does that show about gravity?', o:['Gravity can pull from a distance','Gravity only works when objects touch','Gravity pushes the Moon away','The Moon has no gravity'], a:0,
+  why:'Gravity acts across empty space.'},
+ {t:'orbits', q:'When two objects orbit each other, which one is usually at the center of the orbit?', o:['The one with less mass','The one with much more mass','The one that is hotter','The one that is farther from us'], a:1,
+  why:'The object with much more mass has the stronger gravity, so the smaller one circles it.'},
+ {t:'orbits', q:'Suppose the Sun suddenly had twice as much mass. What would happen to the gravity pull on Earth?', o:['It would get stronger','It would get weaker','It would stay the same','It would turn into a push'], a:0,
+  why:'More mass means a stronger pull, so the Sun would pull on Earth harder.'},
+ {t:'orbits', q:'A star with planets around it suddenly gains twice as much mass. What happens to the orbits of its planets?', o:['The planets move into orbits farther from the star','The orbits stay exactly the same','The planets stop moving','The planets move into orbits closer to the star'], a:3,
+  why:'A stronger pull from the star bends each planet\u2019s path inward, into an orbit closer to the star.'},
+ {t:'orbits', q:'Which change would make a planet orbit CLOSER to its star?', o:['The star loses mass','The star gains mass','Nothing changes','The planet gets warmer'], a:1,
+  why:'A star with more mass pulls harder, which draws the planet into a closer orbit.'},
+ {t:'eclipses', q:'During a lunar eclipse, which object is in the middle?', o:['The Sun','The Moon','Earth','None of them'], a:2,
+  why:'Earth sits between the Sun and the Moon, so Earth’s shadow falls on the Moon.'},
+ {t:'eclipses', q:'Suppose the Moon’s orbit were NOT tilted. What would happen?', o:['There would be no eclipses','There would be an eclipse at every new moon and full moon','There would be no Moon phases','The Moon would stop orbiting'], a:1,
+  why:'The tilt is why the shadow usually misses. Without it, the Moon would line up with the Sun and Earth every month.'},
+ {t:'eclipses', q:'During a solar eclipse, which object is in the middle?', o:['The Sun','The Moon','Earth','None of them'], a:1,
+  why:'The Moon sits between the Sun and Earth, and its shadow falls on part of Earth.'},
+ {t:'seasons', q:'Suppose Earth’s axis were NOT tilted. What would happen to the seasons?', o:['They would be more extreme','Earth would have almost no seasons','Summer would last all year','Winter would last all year'], a:1,
+  why:'Seasons come from the tilt. With no tilt, each place would get about the same sunlight all year.'},
+ {t:'vocab', q:'Which definition best matches GRAVITY?', o:['The force with which Earth, the Moon, or another very massive object pulls other objects toward itself','The force that pushes objects away from a star','The path one object takes around another','The speed of a falling object'], a:0,
+  why:'Gravity is a pulling force between objects. The more massive the object, the stronger the pull.'},
+ {t:'vocab', q:'What is an ORBIT?', o:['The spinning of an object on its axis','A regular, repeating path one object in space takes around another','The shadow one object casts on another','A force that pushes planets away'], a:1,
+  why:'The Moon’s path around Earth and Earth’s path around the Sun are both orbits.'},
+ {t:'vocab', q:'What does WAXING mean for the Moon?', o:['The lit part we can see is getting bigger','The lit part we can see is getting smaller','The Moon is moving closer to Earth','The Moon is in Earth’s shadow'], a:0,
+  why:'Waxing means growing. After a new moon, the lit part we see grows until the full moon.'},
+ {t:'vocab', q:'What does WANING mean for the Moon?', o:['The lit part we can see is getting bigger','The Moon is getting closer to the Sun','The lit part we can see is getting smaller','The Moon has stopped orbiting'], a:2,
+  why:'Waning means shrinking. After a full moon, the lit part we see shrinks back toward a new moon.'},
+ {t:'vocab', q:'What does GIBBOUS mean?', o:['Less than half of the Moon is lit','Exactly half of the Moon is lit','The Moon is completely dark','More than half of the Moon is lit, but not all of it'], a:3,
+  why:'Gibbous is between a quarter and a full moon. Crescent is the opposite, less than half lit.'},
+ {t:'vocab', q:'What is a SUPERMOON?', o:['A full moon at perigee, when the Moon is at its closest point to Earth, so it looks bigger and brighter','A moon that is bigger than normal','A moon that makes its own light','A full moon during an eclipse'], a:0,
+  why:'The Moon’s orbit is slightly oval. When a full moon happens near the closest part, it looks larger.'},
+ {t:'vocab', q:'What is a KING TIDE?', o:['A tide caused by a lunar eclipse','An unusually high tide when the Sun, Moon, and Earth line up and the Moon is close to Earth','A tide that only happens in summer','A tide that happens when the Moon is farthest from Earth'], a:1,
+  why:'The pull of the Sun and Moon together can make extra-high tides. They do not happen at every new or full moon.'},
+ {t:'tides', q:'What mainly causes tides on Earth?', o:['The pull of the Moon’s gravity (with help from the Sun)','Wind blowing across the ocean','Earth’s shadow falling on the oceans','The tilt of Earth’s axis'], a:0,
+  why:'Gravity from the Moon and Sun pulls on Earth’s oceans. The Moon has the larger influence because it is so much closer.'},
+ {t:'tides', q:'Which has the LARGER influence on tides, the Moon or the Sun?', o:['The Sun, because it is so much bigger','The Moon, because it is so much closer','They have exactly the same influence','Neither one. Tides come from wind'], a:1,
+  why:'The Sun is much more massive, but the Moon is far closer, so the Moon has the larger effect on tides.'},
+ {t:'tides', q:'What is a SPRING tide?', o:['A tide that only happens in the season of spring','A very low tide in the morning','A tide when the Sun, Earth, and Moon line up, which happens at new moon and full moon','A tide caused by a storm'], a:2,
+  why:'A spring tide has nothing to do with the season. It happens when the Sun, Earth, and Moon are in a line, so their pulls add together.'},
+ {t:'tides', q:'What is the connection between a supermoon and a king tide?', o:['A full moon at perigee pulls harder, which can make higher tides called king tides','A supermoon blocks the Sun and makes tides smaller','A supermoon pushes the ocean away','There is no connection'], a:0,
+  why:'At perigee the Moon is closer, so its gravity pull is stronger, and tides can reach higher.'},
+ {t:'tides', q:'Why don’t king tides happen at every new moon and every full moon?', o:['The Sun turns off the tides','The Moon also has to be near perigee, its closest point','Earth’s axis changes each month','Tides only happen in winter'], a:1,
+  why:'A new or full moon gives a spring tide. A king tide needs that line-up AND the Moon close to Earth.'},
+ {t:'orbits', q:'Gravity pulls the International Space Station toward Earth all the time. Why doesn’t it fall to Earth?', o:['There is no gravity in space','It moves sideways so fast that as it falls, it keeps missing Earth','It is held up by air','The Moon’s gravity cancels Earth’s'], a:1,
+  why:'The ISS falls toward Earth, but it is also moving sideways so fast that Earth’s surface curves away beneath it.'},
+ {t:'orbits', q:'A cannonball fired from a very tall mountain goes faster and faster each time. What happens at a high enough speed?', o:['It lands closer to the mountain','It goes into orbit around Earth','It stops in the air','It floats away from Earth'], a:1,
+  why:'At great enough speed, the cannonball falls around the curve of Earth and never lands. That is an orbit.'},
+ {t:'orbits', q:'In the My Solar System sim, you lowered the Sun’s mass far enough. What happened to the planet?', o:['It crashed into the Sun','It stayed in exactly the same orbit','It left its orbit and flew away','It started orbiting faster and closer'], a:2,
+  why:'With less mass, the Sun’s gravity was too weak to hold the planet, so it left.'},
+ {t:'seasons', q:'San Diego, Spokane, and Nunavut are all near the same longitude (117°W) but have different temperatures. Why?', o:['They are at different latitudes, so they get different amounts of direct sunlight','They are at different distances from the Moon','Each one has a different Moon phase','Earth’s axis is different at each place'], a:0,
+  why:'Locations farther from the equator get less direct sunlight, so they are cooler.'},
+ {t:'seasons', q:'Why would a tidally locked planet NOT have seasons like Earth’s?', o:['Only one side always faces its star, and it is expected to have no axial tilt','It is too far from its star to have weather','It spins too fast','Tides cancel the seasons'], a:0,
+  why:'One side stays at the same temperature all year, so there is no tilt-driven change.'},
+ {t:'phases', q:'In 1968, Apollo 8 astronauts flew around the Moon. When they passed the half facing AWAY from the Sun, they could barely see it. Why?', o:['The Moon makes its own light, and it was turned off','That half had no sunlight on it, and the Moon does not make its own light','Earth’s shadow was covering it','The Moon’s surface absorbs all light'], a:1,
+  why:'The Moon only shines by reflecting sunlight. A half facing away from the Sun is almost completely dark.'},
+ {t:'phases', q:'Which side of the Moon is the “dark side”?', o:['The side that always faces away from Earth','The side facing away from the Sun at that moment, and it changes as the Moon moves','The side with the dark flat areas','The side that is never lit by the Sun'], a:1,
+  why:'Every part of the Moon is sometimes in sunlight and sometimes in darkness. The dark half is whichever half faces away from the Sun.'}
+];
+
+/* ---------- game state ---------- */
+var app = document.getElementById('app'), statsEl = document.getElementById('stats');
+var state = null;
+
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function start(list){
+  state = {list: shuffle(list.slice()), i:0, score:0, streak:0, best:0, log:[], locked:false};
+  state.list.forEach(function(q){ q._ord = null; });
+  statsEl.hidden = false;
+  document.getElementById('qt').textContent = state.list.length;
+  render();
+}
+
+function home(){
+  statsEl.hidden = true; state = null;
+  var h = '<div class="card hero"><h1>Moon Mission</h1><p>Answer questions to fuel your rocket. Keep a streak going for bonus points. Every answer comes with a quick explanation, so you learn something even when you miss.</p>';
+  h += '<div class="missions">';
+  h += '<button class="mission all" id="m-all"><b>Full Mission</b><span>All '+Q.length+' questions, all topics</span></button>';
+  TOPICS.forEach(function(t){
+    var n = Q.filter(function(q){return q.t===t.id}).length;
+    h += '<button class="mission" data-t="'+t.id+'"><b>'+t.name+'</b><span>'+n+' questions. '+t.blurb+'</span></button>';
+  });
+  h += '</div><p class="hint">Work alone. Use your notebook. This is practice, so it does not go in the gradebook.</p></div>';
+  app.innerHTML = h;
+  document.getElementById('m-all').onclick = function(){ start(Q); };
+  Array.prototype.forEach.call(app.querySelectorAll('[data-t]'), function(b){
+    b.onclick = function(){ start(Q.filter(function(q){return q.t===b.dataset.t})); };
+  });
+}
+
+function render(){
+  var q = state.list[state.i], n = state.list.length;
+  document.getElementById('sc').textContent = state.score;
+  document.getElementById('st').textContent = state.streak;
+  document.getElementById('qn').textContent = state.i+1;
+  var pct = (state.i/n)*100;
+  var topic = TOPICS.filter(function(t){return t.id===q.t})[0].name;
+  var h = '<div class="track" aria-hidden="true"><div class="rail"></div><div class="fill" style="width:'+pct+'%"></div><div class="rocket" style="left:'+Math.max(2,pct)+'%">🚀</div><div class="moon"></div></div>';
+  h += '<div class="card"><div class="topic">'+topic+'</div><h2 class="q">'+esc(q.q)+'</h2>';
+  if(q.diag!==undefined) h += '<div class="diagram">'+sys(q.diag,{id:'d'})+'</div>';
+  var order;
+  if(q.pics){ order = shuffle(q.pics.map(function(v,idx){return idx})); }
+  else { order = shuffle(q.o.map(function(v,idx){return idx})); }
+  state.order = order; state.locked = false;
+  h += '<div class="opts'+(q.pics?' pics':'')+'" id="opts">';
+  order.forEach(function(orig,pos){
+    var letter = 'ABCD'[pos];
+    if(q.pics){
+      h += '<button class="opt pic-opt" data-o="'+orig+'"><span class="k">'+letter+'</span><span class="pic">'+sys(q.pics[orig],{id:'o'+pos})+'</span></button>';
+    } else {
+      h += '<button class="opt" data-o="'+orig+'"><span class="k">'+letter+'</span><span>'+esc(q.o[orig])+'</span></button>';
+    }
+  });
+  h += '</div><div id="fb"></div></div>';
+  app.innerHTML = h;
+  Array.prototype.forEach.call(app.querySelectorAll('.opt'), function(b){ b.onclick = function(){ answer(+b.dataset.o, b); }; });
+}
+
+function answer(orig, btn){
+  if(state.locked) return; state.locked = true;
+  var q = state.list[state.i], ok = (orig===q.a);
+  if(ok){ state.streak++; state.best = Math.max(state.best,state.streak); }
+  var bonus = ok ? Math.min(100,(state.streak-1)*25) : 0;
+  if(ok) state.score += 100 + bonus; else state.streak = 0;
+  state.log.push({t:q.t, ok:ok, q:q});
+  Array.prototype.forEach.call(app.querySelectorAll('.opt'), function(b){
+    b.disabled = true;
+    if(+b.dataset.o===q.a) b.classList.add('right');
+  });
+  if(!ok) btn.classList.add('wrong');
+  document.getElementById('sc').textContent = state.score;
+  document.getElementById('st').textContent = state.streak;
+  var last = state.i===state.list.length-1;
+  var fb = '<div class="feedback '+(ok?'good':'bad')+'"><h3>'+(ok?('Correct! +'+(100+bonus)+(bonus?' (streak bonus)':'')):'Not quite')+'</h3><p>'+esc(q.why)+'</p></div>';
+  fb += '<button class="btn" id="next">'+(last?'See mission report':'Next question')+'</button>';
+  document.getElementById('fb').innerHTML = fb;
+  var nx = document.getElementById('next'); nx.onclick = next; nx.focus();
+}
+
+function next(){
+  if(state.i < state.list.length-1){ state.i++; render(); window.scrollTo(0,0); }
+  else { results(); window.scrollTo(0,0); }
+}
+
+function results(){
+  statsEl.hidden = true;
+  var n = state.log.length, right = state.log.filter(function(x){return x.ok}).length, pct = Math.round(right/n*100);
+  var rank = pct>=90?'Mission Commander':pct>=75?'Pilot':pct>=60?'Cadet':'Ground Crew';
+  var msg = pct>=90?'Mission complete. Strong work across the whole unit.':pct>=75?'Solid. Fix the topics below and replay.':pct>=60?'Getting there. Replay your missed questions.':'Start with the red topics below, then replay.';
+  var h = '<div class="track" aria-hidden="true"><div class="rail"></div><div class="fill" style="width:100%"></div><div class="rocket" style="left:98%">🚀</div><div class="moon"></div></div>';
+  h += '<div class="card hero"><div class="topic">Mission report</div><div class="rank">'+rank+'</div><div class="big">'+right+' of '+n+' correct ('+pct+'%) &middot; '+state.score+' points &middot; best streak '+state.best+'</div><p>'+msg+'</p><div class="bars">';
+  TOPICS.forEach(function(t){
+    var L = state.log.filter(function(x){return x.t===t.id}); if(!L.length) return;
+    var r = L.filter(function(x){return x.ok}).length, p = Math.round(r/L.length*100);
+    h += '<div class="bar '+(p<60?'weak':p<85?'mid':'')+'"><div class="lab"><span>'+t.name+'</span><span>'+r+' / '+L.length+'</span></div><div class="meter"><i style="width:'+p+'%"></i></div></div>';
+  });
+  h += '</div><div class="row">';
+  var missed = state.log.filter(function(x){return !x.ok}).map(function(x){return x.q});
+  if(missed.length) h += '<button class="btn" id="replay">Replay '+missed.length+' missed</button>';
+  h += '<button class="btn ghost" id="again">Back to missions</button></div></div>';
+  app.innerHTML = h;
+  if(missed.length) document.getElementById('replay').onclick = function(){ start(missed); };
+  document.getElementById('again').onclick = home;
+}
+
+home();
+</script>
+
+</html>
